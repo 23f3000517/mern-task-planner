@@ -1,0 +1,91 @@
+import AddTaskForm from './components/AddTaskForm';
+
+export default function App() {
+  return (
+    <div style={{ padding: '20px' }}>
+      <h2>Task Planner</h2>
+      <AddTaskForm />
+    </div>
+  );
+}
+import { useState, useEffect } from 'react';
+
+export default function App() {
+  const [tasks, setTasks] = useState([]);
+  const [title, setTitle] = useState('');
+  const [priority, setPriority] = useState('Medium');
+
+  // 1. Fetch tasks when the app loads
+  useEffect(() => {
+    fetch('http://localhost:5000/api/tasks')
+      .then(res => res.json())
+      .then(data => setTasks(data));
+  }, []);
+
+  // 2. Handle form submission
+  const addTask = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    const res = await fetch('http://localhost:5000/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, priority })
+    });
+    
+    const newTask = await res.json();
+    setTasks([newTask, ...tasks]); // Add new task to UI
+    setTitle(''); // Clear input
+  };
+
+  // 3. Toggle checkbox
+  const toggleComplete = async (id) => {
+    const res = await fetch(`http://localhost:5000/api/tasks/${id}`, { method: 'PUT' });
+    const updatedTask = await res.json();
+    setTasks(tasks.map(t => t._id === id ? updatedTask : t)); // Update UI
+  };
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '500px', margin: 'auto', fontFamily: 'sans-serif' }}>
+      <h2>✅ Task Planner</h2>
+      
+      <form onSubmit={addTask} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        <input 
+          value={title} 
+          onChange={(e) => setTitle(e.target.value)} 
+          placeholder="What needs to be done?" 
+          style={{ flex: 1, padding: '8px' }} 
+        />
+        <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ padding: '8px' }}>
+          <option>Low</option>
+          <option>Medium</option>
+          <option>High</option>
+        </select>
+        <button type="submit" style={{ padding: '8px 16px' }}>Add</button>
+      </form>
+
+      <div>
+        {tasks.map(task => (
+          <div key={task._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderBottom: '1px solid #eee' }}>
+            <input 
+              type="checkbox" 
+              checked={task.isCompleted} 
+              onChange={() => toggleComplete(task._id)} 
+              style={{ width: '18px', height: '18px' }}
+            />
+            <span style={{ 
+              textDecoration: task.isCompleted ? 'line-through' : 'none',
+              color: task.isCompleted ? 'gray' : 'black',
+              flex: 1
+            }}>
+              {task.title}
+            </span>
+            <span style={{ fontSize: '0.8rem', padding: '4px 8px', backgroundColor: '#eee', borderRadius: '4px' }}>
+              {task.priority}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
